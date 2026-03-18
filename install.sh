@@ -45,14 +45,29 @@ trap 'rm -rf "$TMPDIR"' EXIT
 curl -fsSL "$URL" -o "${TMPDIR}/pk.tar.gz"
 tar -xzf "${TMPDIR}/pk.tar.gz" -C "$TMPDIR"
 
+install_to() {
+  mkdir -p "$1"
+  mv "${TMPDIR}/${BINARY}" "$1/${BINARY}"
+  chmod +x "$1/${BINARY}"
+  echo "Done! pk installed to $1/${BINARY}"
+  echo "Run 'pk --help' to get started."
+}
+
 if [ -w "$INSTALL_DIR" ]; then
-  mv "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
-else
-  echo "Need sudo to install to ${INSTALL_DIR}"
+  install_to "$INSTALL_DIR"
+elif sudo -n true 2>/dev/null; then
+  sudo mkdir -p "$INSTALL_DIR"
   sudo mv "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+  sudo chmod +x "${INSTALL_DIR}/${BINARY}"
+  echo "Done! pk installed to ${INSTALL_DIR}/${BINARY}"
+  echo "Run 'pk --help' to get started."
+else
+  FALLBACK="${HOME}/.local/bin"
+  echo "No write access to ${INSTALL_DIR} and sudo requires a password."
+  echo "Installing to ${FALLBACK} instead."
+  install_to "$FALLBACK"
+  case ":$PATH:" in
+    *":${FALLBACK}:"*) ;;
+    *) echo "Add this to your shell profile: export PATH=\"${FALLBACK}:\$PATH\"" ;;
+  esac
 fi
-
-chmod +x "${INSTALL_DIR}/${BINARY}"
-
-echo "Done! pk installed to ${INSTALL_DIR}/${BINARY}"
-echo "Run 'pk --help' to get started."
